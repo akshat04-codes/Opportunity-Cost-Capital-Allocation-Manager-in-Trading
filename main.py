@@ -15,3 +15,17 @@ if __name__ == "__main__":
         print(config.get("name", "No name found in config"))
     except FileNotFoundError:
         print("openenv.yaml not found")
+
+#inputs
+while True:
+    cmd = input("Enter command (step/run/exit): ")
+
+    if cmd == "step":
+        action = input("Enter allocation vector: ")
+        # parse and run step()
+
+    elif cmd == "run":
+        # run full simulation
+
+    elif cmd == "exit":
+        break
