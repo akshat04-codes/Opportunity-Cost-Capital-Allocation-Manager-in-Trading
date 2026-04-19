@@ -1,0 +1,693 @@
+name: trading_allocation_env
+version: 1.0
+description: >
+  Environment for capital allocation in trading. Agents must allocate limited
+  capital across multiple competing opportunities while managing risk-return
+  tradeoffs and avoiding missed opportunities. Focus on decision-making and
+  capital efficiency, not price prediction.
+
+metadata:
+  author: Trading AI Lab
+  created: 2025-01-01
+  domain: finance/trading
+  difficulty_levels:
+    - easy
+    - medium
+    - hard
+
+# ==============================================================================
+# OBSERVATION SCHEMA
+# ==============================================================================
+observation_schema:
+  type: object
+  required:
+    - timestamp
+    - episode_step
+    - available_capital
+    - portfolio_value
+    - active_positions
+    - opportunities
+    - market_state
+    - performance_metrics
+
+  properties:
+    timestamp:
+      type: number
+      description: Current simulation timestamp (unix-like, integer)
+      example: 1000
+
+    episode_step:
+      type: integer
+      description: Current step in episode (0-indexed)
+      example: 42
+
+    available_capital:
+      type: number
+      description: Unallocated cash available for investment (in currency units)
+      minimum: 0
+      example: 50000.50
+
+    portfolio_value:
+      type: number
+      description: Total value of all positions + cash
+      minimum: 0
+      example: 150000.75
+
+    active_positions:
+      type: array
+      description: List of currently held positions
+      items:
+        type: object
+        required:
+          - id
+          - opportunity_id
+          - amount_invested
+          - entry_price
+          - current_price
+          - shares
+          - days_held
+          - realized_pnl
+          - unrealized_pnl
+        properties:
+          id:
+            type: string
+            description: Unique position identifier
+            example: pos_abc123
+
+          opportunity_id:
+            type: string
+            description: Reference to underlying opportunity
+            example: opp_001
+
+          amount_invested:
+            type: number
+            description: Capital deployed in this position
+            minimum: 0
+            example: 10000.0
+
+          entry_price:
+            type: number
+            description: Price at which position was entered
+            minimum: 0
+            example: 100.5
+
+          current_price:
+            type: number
+            description: Current market price
+            minimum: 0
+            example: 105.25
+
+          shares:
+            type: number
+            description: Number of shares held
+            minimum: 0
+            example: 99.5
+
+          days_held:
+            type: integer
+            description: Number of days this position has been open
+            minimum: 0
+            example: 15
+
+          realized_pnl:
+            type: number
+            description: Profit/loss from partial or full closes
+            example: 250.50
+
+          unrealized_pnl:
+            type: number
+            description: Current gain/loss (not yet realized)
+            example: 471.25
+
+    opportunities:
+      type: array
+      description: Available investment opportunities at this step
+      minItems: 0
+      maxItems: 100
+      items:
+        type: object
+        required:
+          - id
+          - name
+          - current_price
+          - expected_return
+          - volatility
+          - risk_rating
+          - max_position_size
+          - time_window_remaining
+          - days_to_expiry
+          - market_cap
+          - liquidity_score
+          - sector
+          - status
+
+        properties:
+          id:
+            type: string
+            description: Unique opportunity identifier
+            example: opp_001
+
+          name:
+            type: string
+            description: Human-readable name
+            example: TechCorp Advanced AI
+
+          current_price:
+            type: number
+            description: Current market price
+            minimum: 0.01
+            example: 100.5
+
+          expected_return:
+            type: number
+            description: Expected return % over holding period
+            example: 12.5
+
+          volatility:
+            type: number
+            description: Annualized volatility (0-100 scale)
+            minimum: 0
+            maximum: 100
+            example: 25.3
+
+          risk_rating:
+            type: string
+            enum: [low, medium, high, very_high]
+            description: Categorical risk assessment
+            example: medium
+
+          max_position_size:
+            type: number
+            description: Maximum capital that can be deployed
+            minimum: 0
+            example: 50000.0
+
+          time_window_remaining:
+            type: integer
+            description: Steps until opportunity expires
+            minimum: 0
+            example: 20
+
+          days_to_expiry:
+            type: integer
+            description: Days until opportunity window closes
+            minimum: 0
+            example: 5
+
+          market_cap:
+            type: number
+            description: Estimated market capitalization
+            minimum: 0
+            example: 5000000000.0
+
+          liquidity_score:
+            type: number
+            description: Liquidity score (0-100, higher is more liquid)
+            minimum: 0
+            maximum: 100
+            example: 78.5
+
+          sector:
+            type: string
+            description: Market sector or category
+            enum: [technology, healthcare, finance, energy, consumer, industrial, materials, utilities, real_estate, communications]
+            example: technology
+
+          status:
+            type: string
+            enum: [active, closing_soon, about_to_expire, expired]
+            description: Status of the opportunity window
+            example: active
+
+    market_state:
+      type: object
+      description: Aggregate market conditions
+      required:
+        - market_regime
+        - volatility_index
+        - correlation_matrix_summary
+        - sector_performance
+        - risk_environment
+
+      properties:
+        market_regime:
+          type: string
+          enum: [bullish, neutral, bearish, high_volatility, crisis]
+          description: Overall market conditions
+          example: neutral
+
+        volatility_index:
+          type: number
+          description: Market-wide volatility index (0-100)
+          minimum: 0
+          maximum: 100
+          example: 18.5
+
+        correlation_matrix_summary:
+          type: number
+          description: Average pairwise correlation of all opportunities
+          minimum: -1
+          maximum: 1
+          example: 0.35
+
+        sector_performance:
+          type: object
+          description: YTD performance by sector
+          additionalProperties:
+            type: number
+          example:
+            technology: 18.5
+            healthcare: 5.2
+            finance: -2.1
+
+        risk_environment:
+          type: string
+          enum: [low_risk, moderate_risk, elevated_risk, extreme_risk]
+          description: Overall risk assessment
+          example: moderate_risk
+
+    performance_metrics:
+      type: object
+      description: Cumulative performance statistics
+      required:
+        - total_return_pct
+        - sharpe_ratio
+        - max_drawdown_pct
+        - win_rate_pct
+        - num_winning_trades
+        - num_losing_trades
+        - avg_winning_trade_pct
+        - avg_losing_trade_pct
+        - capital_utilization_pct
+
+      properties:
+        total_return_pct:
+          type: number
+          description: Total return since episode start
+          example: 8.5
+
+        sharpe_ratio:
+          type: number
+          description: Risk-adjusted return metric
+          example: 1.23
+
+        max_drawdown_pct:
+          type: number
+          description: Maximum peak-to-trough decline
+          minimum: 0
+          example: 12.3
+
+        win_rate_pct:
+          type: number
+          description: Percentage of closed positions that were profitable
+          minimum: 0
+          maximum: 100
+          example: 62.5
+
+        num_winning_trades:
+          type: integer
+          description: Count of winning closed positions
+          minimum: 0
+          example: 5
+
+        num_losing_trades:
+          type: integer
+          description: Count of losing closed positions
+          minimum: 0
+          example: 3
+
+        avg_winning_trade_pct:
+          type: number
+          description: Average return on winning trades
+          example: 4.2
+
+        avg_losing_trade_pct:
+          type: number
+          description: Average loss on losing trades
+          example: -2.1
+
+        capital_utilization_pct:
+          type: number
+          description: Percentage of available capital currently invested
+          minimum: 0
+          maximum: 100
+          example: 72.5
+
+# ==============================================================================
+# ACTION SCHEMA
+# ==============================================================================
+action_schema:
+  type: object
+  description: >
+    Agent action specification. Actions must specify allocations or closures.
+    Each action is a separate decision for a single opportunity.
+  
+  required:
+    - action_type
+    - opportunity_id
+
+  properties:
+    action_type:
+      type: string
+      enum:
+        - allocate_capital
+        - close_position
+        - reduce_position
+        - hold
+      description: Type of action to execute
+      example: allocate_capital
+
+    opportunity_id:
+      type: string
+      description: >
+        Target opportunity ID. For hold actions, this is still required
+        (can reference any opportunity or "none").
+      example: opp_001
+
+    amount:
+      type: number
+      description: >
+        Amount of capital to allocate/close. Required for allocate_capital,
+        close_position, and reduce_position. Ignored for hold.
+      minimum: 0
+      example: 5000.0
+
+  additionalProperties: false
+
+action_constraints:
+  - "allocate_capital: amount must be <= available_capital"
+  - "allocate_capital: amount must be <= opportunity.max_position_size"
+  - "close_position: amount must be <= position.amount_invested"
+  - "reduce_position: 0 < amount < position.amount_invested"
+  - "hold: no additional constraints"
+  - "All amounts must be non-negative"
+  - "Attempts to violate constraints result in no-op with penalty"
+
+# ==============================================================================
+# REWARD SCHEMA
+# ==============================================================================
+reward_schema:
+  type: number
+  description: Continuous reward signal (unbounded, but typically -1000 to +1000)
+  composition:
+    - base_return: Capital gains from closed/open positions
+    - risk_penalty: Penalty for excessive volatility or drawdown
+    - utilization_bonus: Bonus for efficient capital deployment
+    - opportunity_cost_penalty: Penalty for missed high-return opportunities
+    - diversification_bonus: Bonus for balanced portfolio across sectors
+    - concentration_penalty: Penalty for over-concentration in single position
+    - timing_bonus: Bonus for good entry/exit decisions
+    - imbalance_penalty: Penalty for leaving capital idle when opportunities exist
+  example_values:
+    - step_reward: 125.50
+    - cumulative_reward: 1450.75
+
+# ==============================================================================
+# EPISODE TERMINATION
+# ==============================================================================
+episode_termination:
+  max_steps: 500
+  early_termination:
+    - description: Portfolio value drops below 10% of initial capital
+      condition: portfolio_value < 0.1 * initial_capital
+      description_human: Bankruptcy condition
+
+    - description: All opportunities expire and no positions remain
+      condition: no_active_opportunities AND no_active_positions
+      description_human: Market ended
+
+    - description: Agent reaches maximum allowed positions
+      condition: num_active_positions >= max_allowed_positions
+      description_human: Portfolio full
+
+  success_criteria:
+    - portfolio_value > 1.5 * initial_capital (easy)
+    - portfolio_value > 2.0 * initial_capital (medium)
+    - portfolio_value > 3.0 * initial_capital AND sharpe_ratio > 1.5 (hard)
+
+# ==============================================================================
+# TASK DEFINITIONS
+# ==============================================================================
+tasks:
+  - name: easy
+    id: trading_allocation_easy
+    description: >
+      Easy scenario: Moderate number of stable opportunities, low volatility,
+      clear risk-return profiles. Agent must allocate capital effectively
+      without complex timing constraints.
+    
+    difficulty: 1.0
+    
+    scenario_config:
+      initial_capital: 100000.0
+      num_opportunities: 8
+      num_steps: 100
+      max_position_limit: 5
+      opportunity_properties:
+        volatility_range: [5, 20]
+        expected_return_range: [5, 15]
+        time_window_range: [50, 100]
+        max_position_size_range: [20000, 50000]
+        risk_distribution:
+          low: 0.50
+          medium: 0.40
+          high: 0.10
+          very_high: 0.00
+
+    success_thresholds:
+      portfolio_value_target: 150000.0
+      sharpe_ratio_minimum: 0.8
+      max_drawdown_acceptable: 20.0
+      expected_completion_steps: 80
+
+    grader_weights:
+      return_pct: 0.50
+      risk_adjusted_return: 0.25
+      capital_efficiency: 0.15
+      diversification: 0.10
+
+  - name: medium
+    id: trading_allocation_medium
+    description: >
+      Medium scenario: More opportunities with mixed stability, moderate volatility,
+      time-sensitive decisions. Agent must balance multiple competing priorities
+      including diversification, timing, and risk management.
+
+    difficulty: 5.0
+
+    scenario_config:
+      initial_capital: 100000.0
+      num_opportunities: 15
+      num_steps: 200
+      max_position_limit: 8
+      opportunity_properties:
+        volatility_range: [10, 40]
+        expected_return_range: [2, 25]
+        time_window_range: [30, 150]
+        max_position_size_range: [10000, 60000]
+        risk_distribution:
+          low: 0.30
+          medium: 0.40
+          high: 0.25
+          very_high: 0.05
+
+    success_thresholds:
+      portfolio_value_target: 200000.0
+      sharpe_ratio_minimum: 1.0
+      max_drawdown_acceptable: 25.0
+      expected_completion_steps: 150
+
+    grader_weights:
+      return_pct: 0.40
+      risk_adjusted_return: 0.30
+      capital_efficiency: 0.15
+      diversification: 0.10
+      opportunity_capture: 0.05
+
+  - name: hard
+    id: trading_allocation_hard
+    description: >
+      Hard scenario: Large opportunity set with high volatility, rapidly
+      changing conditions, tight time windows, and complex sector correlations.
+      Agent must make sophisticated decisions under uncertainty with limited
+      information and tight constraints.
+
+    difficulty: 9.0
+
+    scenario_config:
+      initial_capital: 100000.0
+      num_opportunities: 30
+      num_steps: 300
+      max_position_limit: 10
+      opportunity_properties:
+        volatility_range: [15, 80]
+        expected_return_range: [-10, 50]
+        time_window_range: [10, 200]
+        max_position_size_range: [5000, 80000]
+        risk_distribution:
+          low: 0.15
+          medium: 0.35
+          high: 0.35
+          very_high: 0.15
+
+    success_thresholds:
+      portfolio_value_target: 300000.0
+      sharpe_ratio_minimum: 1.5
+      max_drawdown_acceptable: 30.0
+      expected_completion_steps: 200
+
+    grader_weights:
+      return_pct: 0.35
+      risk_adjusted_return: 0.35
+      capital_efficiency: 0.10
+      diversification: 0.10
+      opportunity_capture: 0.05
+      market_regime_adaptation: 0.05
+
+# ==============================================================================
+# GRADING SPECIFICATIONS
+# ==============================================================================
+graders:
+  - name: episode_grader
+    description: >
+      Evaluates overall episode performance on scale 0.0-1.0.
+      Combines return, risk-adjustment, capital efficiency, and strategic
+      decision quality.
+    
+    score_range: [0.0, 1.0]
+    
+    metrics:
+      - name: return_score
+        formula: min(1.0, (portfolio_value / initial_capital - 1.0) / expected_return_target)
+        description: Normalized return achievement
+        weight: 0.40
+
+      - name: risk_adjusted_score
+        formula: sharpe_ratio / target_sharpe_ratio (clamped to 1.0)
+        description: Risk-adjusted performance
+        weight: 0.30
+
+      - name: capital_efficiency_score
+        formula: (capital_deployed / available_capital) * (return / max_possible_return)
+        description: Efficiency of capital use
+        weight: 0.15
+
+      - name: diversification_score
+        formula: sector_concentration / 0.25 (clamped to 1.0)
+        description: Portfolio diversification quality
+        weight: 0.10
+
+      - name: opportunity_capture_score
+        formula: (captured_high_return_opps / total_high_return_opps)
+        description: Capture rate of high-opportunity trades
+        weight: 0.05
+
+  - name: financial_metrics_grader
+    description: Evaluates traditional finance metrics
+    score_range: [0.0, 1.0]
+    metrics:
+      - name: total_return_pct
+        normalization: min(1.0, actual_return / expected_return)
+        
+      - name: sharpe_ratio
+        normalization: min(1.0, actual_sharpe / target_sharpe)
+        
+      - name: max_drawdown_pct
+        normalization: max(0.0, 1.0 - (actual_drawdown / max_acceptable_drawdown))
+        
+      - name: win_rate
+        normalization: actual_win_rate / 0.60 (assuming 60% is good)
+
+  - name: allocation_quality_grader
+    description: Evaluates capital allocation decisions
+    score_range: [0.0, 1.0]
+    metrics:
+      - name: capital_utilization
+        formula: deployed_capital / (initial_capital - emergency_reserve)
+        target: 0.75
+        
+      - name: concentration_penalty
+        formula: 1.0 - max_single_position / portfolio_value
+        target: max_single_position < 0.20 * portfolio_value
+        
+      - name: opportunity_cost
+        formula: (captured_value / all_available_value)
+        target: >
+         0.70
+
+# ==============================================================================
+# BASELINE AGENT SPECIFICATION
+# ==============================================================================
+baseline_agent:
+  name: simple_allocation_baseline
+  description: >
+    Basic reference agent that uses heuristic allocation strategy:
+    1. Allocate evenly across top N opportunities by Sharpe ratio
+    2. Close positions when risk_rating changes to very_high
+    3. Rebalance every K steps to maintain target allocation
+  
+  strategy:
+    - step_1: Calculate Sharpe-like metric for each opportunity
+    - step_2: Select top 5 by metric
+    - step_3: Allocate 20% of available capital to each
+    - step_4: Hold until opportunity expires or risk escalates
+    - step_5: Rebalance every 20 steps
+  
+  expected_performance:
+    easy: 0.65
+    medium: 0.50
+    hard: 0.35
+
+# ==============================================================================
+# ENVIRONMENT METADATA
+# ==============================================================================
+environment_properties:
+  stochastic: true
+  deterministic_components:
+    - opportunity_generation
+    - market_regime_transitions (if seeded)
+  
+  state_space:
+    continuous_dimensions: 50+
+    discrete_dimensions: 15+
+    observation_history_required: false
+  
+  action_space:
+    type: discrete
+    typical_actions_per_step: 5-20
+  
+  max_episode_length: 500
+  typical_episode_length: 150
+  
+  parallelization:
+    supports_parallel_episodes: true
+    thread_safe: true
+
+# ==============================================================================
+# VALIDATION & DEBUGGING
+# ==============================================================================
+validation:
+  required_fields:
+    observation:
+      - timestamp
+      - available_capital
+      - active_positions
+      - opportunities
+      - market_state
+    
+    action:
+      - action_type
+      - opportunity_id
+  
+  type_checking: strict
+  
+  constraint_checking:
+    - capital_conservation
+    - action_feasibility
+    - state_consistency
+
+debugging:
+  verbose_logging: false
+  log_level: INFO
+  render_mode: none
+  trajectory_recording: true
